@@ -34,6 +34,7 @@ public class Network {
             this.rewire();
             //System.out.println(this.getMeanDegree() + "\t" + this.getCV());
         }
+        System.out.println("POST CV-OPTIMIZATION NETWORK BELOW");
         this.printAdjacencyMatrix();
         //this.printEdgeList();
 
