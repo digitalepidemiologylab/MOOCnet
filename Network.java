@@ -28,15 +28,15 @@ public class Network {
     public void run() {
         double targetCV = Settings.getInstance().getTargetCV();
         this.initSmallWorldGraph();
-        this.printAdjacencyMatrix();
-        //this.printEdgeList();
+        //this.printAdjacencyMatrix();
+        this.printEdgeList();
         while (this.getCV() < targetCV) {
             this.rewire();
             //System.out.println(this.getMeanDegree() + "\t" + this.getCV());
         }
         System.out.println("POST CV-OPTIMIZATION NETWORK BELOW");
-        this.printAdjacencyMatrix();
-        //this.printEdgeList();
+        //this.printAdjacencyMatrix();
+        this.printEdgeList();
 
     }
 
@@ -98,7 +98,7 @@ public class Network {
     }
     public void printEdgeList() {
         for (Edge edge : this.graph.getEdges()) {
-            System.out.println(this.graph.getEndpoints(edge).getFirst() + "\t" + this.graph.getEndpoints(edge).getSecond());
+            System.out.println(this.graph.getEndpoints(edge).getFirst().getID() + "\t" + this.graph.getEndpoints(edge).getSecond().getID());
         }
     }
 
@@ -141,33 +141,36 @@ public class Network {
 
     private void rewire() {
         double currentCV = this.getCV();
-        for (Edge edge : this.edges) {
-            Node source = this.graph.getEndpoints(edge).getFirst();
-            Node destination = this.graph.getEndpoints(edge).getSecond();
-            // we don't want to remove an individual's last remaining edge
-            if (this.graph.getNeighborCount(destination) == 1) continue;
-            this.graph.removeEdge(edge);
+        Edge edge = this.edges[this.random.nextInt(this.edges.length)];
 
-            // pick a new destination that is not already connected to the source
-            Node newDestination;
-            do{
-                newDestination = this.nodes[this.random.nextInt(this.nodes.length)];
-            }
-            while (this.graph.getNeighbors(source).contains(newDestination));
+        Node source = this.graph.getEndpoints(edge).getFirst();
+        Node destination = this.graph.getEndpoints(edge).getSecond();
+        // we don't want to remove an individual's last remaining edge
+        if (this.graph.getNeighborCount(destination) == 1) return;
 
-            //draw the new edge
-            Edge newEdge = new Edge();
-            this.graph.addEdge(newEdge, source, newDestination);
-
-            // decreases in CV are reverse
-            if (this.getCV() < currentCV) {
-                this.graph.removeEdge(newEdge);
-                this.graph.addEdge(new Edge(), source, destination);
-            }
-
-            //otherwise, we re-make the this.edges to account for the changes and move to the next
-            this.remakeEdgeList();
+        // pick a new destination that is not already connected to the source
+        Node newDestination;
+        do{
+            newDestination = this.nodes[this.random.nextInt(this.nodes.length)];
         }
-    }
+        while (this.graph.getNeighbors(source).contains(newDestination));
 
+        if (this.graph.getNeighbors(source).contains(newDestination)) return;
+        if (source.getID() == newDestination.getID()) return;
+
+        //remove edge HERE (after we've confirmed that we're not about to make a self-edge or double-edge
+        this.graph.removeEdge(edge);
+
+        //draw the new edge
+        Edge newEdge = new Edge();
+        this.graph.addEdge(newEdge, source, newDestination);
+
+        // decreases in CV are reverse
+        if (this.getCV() < currentCV) {
+            this.graph.removeEdge(newEdge);
+            this.graph.addEdge(new Edge(), source, destination);
+        }
+        //regardless, we re-make the this.edges array to account for the changes and move to the next
+        this.remakeEdgeList();
+    }
 }

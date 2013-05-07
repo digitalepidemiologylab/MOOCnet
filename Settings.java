@@ -10,7 +10,7 @@ public class Settings {
 
     private static Settings ourInstance = new Settings();
     private int    k = 10;
-    private double targetCV = 0.50;
+    private double targetCV = 0.5;
     private int    numberOfNodes = 500;
 
 
