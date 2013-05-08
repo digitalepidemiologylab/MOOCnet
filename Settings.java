@@ -9,8 +9,8 @@ package MOOCnet;
 public class Settings {
 
     private static Settings ourInstance = new Settings();
-    private int    k = 10;
-    private double targetCV = 0.5;
+    private int    k = 5;
+    private double targetCV = 2;
     private int    numberOfNodes = 500;
 
 

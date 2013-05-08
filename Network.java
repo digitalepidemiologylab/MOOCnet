@@ -10,7 +10,10 @@ import edu.uci.ics.jung.graph.Graph;
 import edu.uci.ics.jung.graph.SparseGraph;
 import edu.uci.ics.jung.graph.util.EdgeType;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Random;
+import java.util.Set;
 
 public class Network {
 
@@ -27,17 +30,51 @@ public class Network {
 
     public void run() {
         double targetCV = Settings.getInstance().getTargetCV();
-        this.initSmallWorldGraph();
-        //this.printAdjacencyMatrix();
+        this.initRandomGraph();
         this.printEdgeList();
         while (this.getCV() < targetCV) {
             this.rewire();
-            //System.out.println(this.getMeanDegree() + "\t" + this.getCV());
+            System.out.println(this.getMeanDegree() + "\t" + this.getCV());
         }
         System.out.println("POST CV-OPTIMIZATION NETWORK BELOW");
-        //this.printAdjacencyMatrix();
         this.printEdgeList();
 
+    }
+
+    public void initRandomGraph() {
+        Set components;
+        int numberOfNodes = Settings.getInstance().getNumberOfNodes();
+        int k = Settings.getInstance().getK();
+        this.nodes = new Node[numberOfNodes];
+        do {
+            this.graph = new SparseGraph<Node, Edge>();
+            for (int i = 0; i < numberOfNodes; i++) {
+                Node node = new Node(i);
+                this.nodes[i] = node;
+                this.graph.addVertex(node);
+            }
+
+            for (Node node : this.graph.getVertices()) {
+                while (this.graph.degree(node) < k) {
+                    Node node2;
+                    do {
+                        node2 = this.nodes[this.random.nextInt(this.nodes.length)];
+                    }
+                    while(node2 == node);
+
+                    if (this.graph.getNeighbors(node).contains(node2) || this.graph.degree(node2) == k) continue;
+                    else {
+                        Edge newEdge = new Edge();
+                        this.graph.addEdge(newEdge, node, node2);
+                    }
+                }
+            }
+
+            WeakComponentClusterer wcc = new WeakComponentClusterer();
+            components = wcc.transform(this.graph);
+        }
+        while (components.size() > 1);
+        this.remakeEdgeList();
     }
 
     public void initSmallWorldGraph() {
@@ -140,12 +177,13 @@ public class Network {
     }
 
     private void rewire() {
+
+
         double currentCV = this.getCV();
         Edge edge = this.edges[this.random.nextInt(this.edges.length)];
 
         Node source = this.graph.getEndpoints(edge).getFirst();
         Node destination = this.graph.getEndpoints(edge).getSecond();
-        // we don't want to remove an individual's last remaining edge
         if (this.graph.getNeighborCount(destination) == 1) return;
 
         // pick a new destination that is not already connected to the source
@@ -155,7 +193,9 @@ public class Network {
         }
         while (this.graph.getNeighbors(source).contains(newDestination));
 
+        //check for creating a double edge
         if (this.graph.getNeighbors(source).contains(newDestination)) return;
+        //check for a self edge
         if (source.getID() == newDestination.getID()) return;
 
         //remove edge HERE (after we've confirmed that we're not about to make a self-edge or double-edge
@@ -165,12 +205,29 @@ public class Network {
         Edge newEdge = new Edge();
         this.graph.addEdge(newEdge, source, newDestination);
 
-        // decreases in CV are reverse
-        if (this.getCV() < currentCV) {
+        Set components;
+        WeakComponentClusterer wcc = new WeakComponentClusterer();
+        components = wcc.transform(this.graph);
+
+        // rewires that decrease CV or disconnect the GCC are reversed
+        if (this.getCV() < currentCV || components.size()>1) {
             this.graph.removeEdge(newEdge);
             this.graph.addEdge(new Edge(), source, destination);
         }
-        //regardless, we re-make the this.edges array to account for the changes and move to the next
+        //re-make this.edges to account for the changes and move to the next
         this.remakeEdgeList();
+    }
+
+    private boolean checkSelfLoops() {
+        boolean selfEdge = false;
+        for (Edge edge : this.graph.getEdges()) {
+            if (this.graph.getEndpoints(edge).getFirst() == this.graph.getEndpoints(edge).getSecond())  {
+                selfEdge=true;
+                System.out.println("selfedge!");
+
+            }
+
+        }
+        return selfEdge;
     }
 }
