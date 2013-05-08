@@ -12,6 +12,7 @@ public class Settings {
     private int    k = 5;
     private double targetCV = 2;
     private int    numberOfNodes = 500;
+    private int    networkType  = 0 ;
 
 
     public static Settings getInstance() {
@@ -20,6 +21,14 @@ public class Settings {
 
     private Settings() {
 
+    }
+
+    public void setNetworkType(int networkType) {
+        this.networkType = networkType;
+    }
+
+    public int getNetworkType() {
+        return this.networkType;
     }
 
     public void setK(int k) {
