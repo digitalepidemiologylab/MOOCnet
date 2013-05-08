@@ -6,17 +6,14 @@ package MOOCnet;
  * Time: 12:22 PM
  */
 
-import edu.uci.ics.jung.algorithms.cluster.WeakComponentClusterer;
-import edu.uci.ics.jung.graph.Graph;
-import edu.uci.ics.jung.graph.SparseGraph;
-import edu.uci.ics.jung.graph.util.EdgeType;
+import edu.uci.ics.jung.algorithms.cluster.WeakComponentClusterer ;
+import edu.uci.ics.jung.graph.Graph         ;
+import edu.uci.ics.jung.graph.SparseGraph   ;
+import edu.uci.ics.jung.graph.util.EdgeType ;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Random;
-import java.util.Set;
+import java.util.*        ;
 
 public class Network {
 
@@ -36,15 +33,13 @@ public class Network {
     }
 
     public void run() {
-        Settings.getInstance().setK(5)                    ;
+        Settings.getInstance().setMeanDegree(5)           ;
         Settings.getInstance().setNumberOfNodes(500)      ;
         Settings.getInstance().setTargetCV(2.0)           ;
         Settings.getInstance().setNetworkType(RANDOM_NET) ;
-
         int networkType = Settings.getInstance().getNetworkType();
-
-        if (networkType == RANDOM_NET)     this.runRandom()     ;
-        if (networkType == SMALLWORLD_NET) this.runSmallWorld() ;
+        if (networkType == RANDOM_NET)     this.runRandom()      ;
+        if (networkType == SMALLWORLD_NET) this.runSmallWorld()  ;
     }
 
     public void runSmallWorld() {
@@ -60,7 +55,6 @@ public class Network {
         this.printEdgeList(fileName);
 
     }
-
 
     public void runRandom() {
         System.out.println("THIS MAY TAKE A FEW ATTEMPTS...please hold...");
@@ -84,7 +78,7 @@ public class Network {
     public void initRandomGraph() {
         Set components;
         int numberOfNodes = Settings.getInstance().getNumberOfNodes() ;
-        int meanDegree    = Settings.getInstance().getK()             ;
+        int meanDegree    = Settings.getInstance().getMeanDegree()             ;
         this.nodes        = new Node[numberOfNodes]                   ;
         do {
             this.graph = new SparseGraph<Node, Edge>();
@@ -126,7 +120,7 @@ public class Network {
     public void initSmallWorldGraph() {
         Set components                                                ;
         int numberOfNodes = Settings.getInstance().getNumberOfNodes() ;
-        int meanDegree    = Settings.getInstance().getK()             ;
+        int meanDegree    = Settings.getInstance().getMeanDegree()             ;
             this.nodes    = new Node[numberOfNodes]                   ;
         do {
             this.graph = new SparseGraph<Node, Edge>();
@@ -264,9 +258,7 @@ public class Network {
             if (this.graph.getEndpoints(edge).getFirst() == this.graph.getEndpoints(edge).getSecond())  {
                 selfEdge=true;
                 System.out.println("selfedge!");
-
             }
-
         }
         return selfEdge;
     }

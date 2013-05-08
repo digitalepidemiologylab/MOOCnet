@@ -8,12 +8,11 @@ package MOOCnet;
  */
 public class Settings {
 
-    private static Settings ourInstance = new Settings();
-    private int    k = 5;
-    private double targetCV = 2;
-    private int    numberOfNodes = 500;
-    private int    networkType  = 0 ;
-
+    private static Settings ourInstance = new Settings() ;
+    private int meanDegree       = 5                     ;
+    private double targetCV      = 2                     ;
+    private int    numberOfNodes = 500                   ;
+    private int    networkType   = 0                     ;
 
     public static Settings getInstance() {
         return ourInstance;
@@ -31,12 +30,12 @@ public class Settings {
         return this.networkType;
     }
 
-    public void setK(int k) {
-        this.k = k;
+    public void setMeanDegree(int meanDegree) {
+        this.meanDegree = meanDegree;
     }
 
-    public int getK() {
-        return this.k;
+    public int getMeanDegree() {
+        return this.meanDegree;
     }
 
     public void setTargetCV(double targetCV) {
@@ -54,5 +53,4 @@ public class Settings {
     public int getNumberOfNodes() {
         return this.numberOfNodes;
     }
-
 }
