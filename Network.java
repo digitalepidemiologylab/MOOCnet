@@ -44,7 +44,7 @@ public class Network {
         Settings.getInstance().setMeanDegree(5)               ;
         Settings.getInstance().setNumberOfNodes(500)          ;
         Settings.getInstance().setTargetCV(0.01)              ;
-        Settings.getInstance().setNetworkType(SMALLWORLD_NET) ;
+        Settings.getInstance().setNetworkType(RANDOM_NET)     ;
         Settings.getInstance().setRefusalCoverage(0.20)       ;
         Settings.getInstance().setAssortativityTarget(0.99999);
 
@@ -54,7 +54,7 @@ public class Network {
 
         this.assignVaccinationSentimentStatus();
         this.increaseAssortativity();
-        this.printEdgeList("edges");
+        this.printEdgeList("edges" + "\t" + Settings.getInstance().getNetworkType());
         this.printNodeList("nodes");
     }
 
@@ -345,8 +345,6 @@ public class Network {
             }
         }
     }
-
-
     private double measureAssortativity() {
         /**
          * This method counts each type of edge in the network, and returns those values to calculate assortativity
