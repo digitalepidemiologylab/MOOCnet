@@ -6,14 +6,15 @@ package MOOCnet;
  * Time: 12:22 PM
  */
 
-import edu.uci.ics.jung.algorithms.cluster.WeakComponentClusterer ;
-import edu.uci.ics.jung.graph.Graph         ;
-import edu.uci.ics.jung.graph.SparseGraph   ;
-import edu.uci.ics.jung.graph.util.EdgeType ;
+import edu.uci.ics.jung.algorithms.cluster.WeakComponentClusterer;
+import edu.uci.ics.jung.graph.Graph;
+import edu.uci.ics.jung.graph.SparseGraph;
+import edu.uci.ics.jung.graph.util.EdgeType;
+import edu.uci.ics.jung.graph.util.Pair;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.*        ;
+import java.util.*;
 
 public class Network {
 
@@ -25,6 +26,13 @@ public class Network {
     public static final int   SMALLWORLD_NET = 1     ;
     private int               restartCounter = 0     ;
     private boolean           g2g            = false ;
+    private int               refusalCount   = 0     ;
+    private int               edgesNN = 0            ;
+    private int               edgesNP = 0            ;
+    private int               edgesPP = 0            ;
+    private int               edgesPN = 0            ;
+    private double            deltaR  = 0            ;
+
 
 
     public static void main(String[] args) {
@@ -33,13 +41,43 @@ public class Network {
     }
 
     public void run() {
-        Settings.getInstance().setMeanDegree(5)           ;
-        Settings.getInstance().setNumberOfNodes(500)      ;
-        Settings.getInstance().setTargetCV(2.0)           ;
-        Settings.getInstance().setNetworkType(RANDOM_NET) ;
+        Settings.getInstance().setMeanDegree(5)               ;
+        Settings.getInstance().setNumberOfNodes(500)          ;
+        Settings.getInstance().setTargetCV(0.01)              ;
+        Settings.getInstance().setNetworkType(SMALLWORLD_NET) ;
+        Settings.getInstance().setRefusalCoverage(0.20)       ;
+        Settings.getInstance().setAssortativityTarget(0.99999);
+
         int networkType = Settings.getInstance().getNetworkType();
         if (networkType == RANDOM_NET)     this.runRandom()      ;
         if (networkType == SMALLWORLD_NET) this.runSmallWorld()  ;
+
+        this.assignVaccinationSentimentStatus();
+        this.increaseAssortativity();
+        this.printEdgeList("edges");
+        this.printNodeList("nodes");
+    }
+
+    public void assignVaccinationSentimentStatus() {
+        int    numberOfNodes    = Settings.getInstance().getNumberOfNodes();
+        double refusalCovg      = Settings.getInstance().getRefusalCoverage();
+        int    numberOfRefusers = (int)Math.round(numberOfNodes * refusalCovg);
+
+        while (this.refusalCount < numberOfRefusers) {
+            Node randomNode;
+            do {
+                randomNode = this.nodes[this.random.nextInt(numberOfNodes)];
+            }
+            while (randomNode.getStatus() != Node.NEUTRAL);
+            if (this.random.nextDouble() < refusalCovg) {
+                randomNode.setStatus(Node.REFUSE);
+                this.refusalCount++;
+            }
+        }
+
+        for (Node node : this.graph.getVertices()) {
+            if (node.getStatus() == Node.NEUTRAL) node.setStatus(Node.ACCEPT);
+        }
     }
 
     public void runSmallWorld() {
@@ -271,10 +309,198 @@ public class Network {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        out.println("source\ttarget");
         for (Edge edge : this.graph.getEdges()) {
             out.println(this.graph.getEndpoints(edge).getFirst().getID() + "\t" + this.graph.getEndpoints(edge).getSecond().getID());
 
         }
         out.close();
     }
+
+    private void printNodeList(String filename) {
+
+        PrintWriter out = null;
+        try {
+            out = new PrintWriter(new java.io.FileWriter(filename));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        out.println("id\tstatus");
+        for (Node node : this.graph.getVertices()) {
+            out.println(node.getID() + "\t" + node.getStatus());
+
+        }
+        out.close();
+    }
+
+    private void increaseAssortativity() {
+        double currentR = this.measureAssortativity();
+        double targetR  = Settings.getInstance().getAssortativityTarget();
+        int controlCounter = 0;
+        if (currentR < targetR) {
+            while (currentR < targetR) {
+                currentR = this.assortVaccineRefusal(currentR);
+                controlCounter++;
+                System.out.println(currentR);
+            }
+        }
+    }
+
+
+    private double measureAssortativity() {
+        /**
+         * This method counts each type of edge in the network, and returns those values to calculate assortativity
+         */
+        int numberOfEdges_Neg_Neg = 0;
+        int numberOfEdges_Pos_Pos = 0;
+        int numberOfEdges_Pos_Neg = 0;
+        int numberOfEdges_Neg_Pos = 0;
+
+        for (Edge edge : this.graph.getEdges()) {
+            Pair pair        =  this.graph.getEndpoints(edge) ;
+            Node source      =  (Node)pair.getFirst()   ;
+            Node destination =  (Node)pair.getSecond()  ;
+            if (source.getStatus() == Node.REFUSE && destination.getStatus() == Node.REFUSE) numberOfEdges_Neg_Neg++ ;
+            if (source.getStatus() == Node.ACCEPT && destination.getStatus() == Node.ACCEPT) numberOfEdges_Pos_Pos++ ;
+            if (source.getStatus() == Node.ACCEPT && destination.getStatus() == Node.REFUSE) numberOfEdges_Pos_Neg++ ;
+            if (source.getStatus() == Node.REFUSE && destination.getStatus() == Node.ACCEPT) numberOfEdges_Neg_Pos++ ;
+        }
+
+        this.edgesNN = numberOfEdges_Neg_Neg;
+        this.edgesPP = numberOfEdges_Pos_Pos;
+        this.edgesNP = numberOfEdges_Neg_Pos;
+        this.edgesPN = numberOfEdges_Pos_Neg;
+
+        return this.getAssortativity(numberOfEdges_Neg_Neg, numberOfEdges_Pos_Pos, numberOfEdges_Pos_Neg, numberOfEdges_Neg_Pos);
+    }
+
+    public double getAssortativity(int numberOfEdges_Neg_Neg, int numberOfEdges_Pos_Pos, int numberOfEdges_Pos_Neg, int numberOfEdges_Neg_Pos) {
+        /**
+         * Assortative Mixing calculations for directed networks (see Newman 2003)
+         */
+        int    numberOfEdges     = numberOfEdges_Neg_Neg + numberOfEdges_Pos_Pos + numberOfEdges_Pos_Neg + numberOfEdges_Neg_Pos ;
+        double eII_neg           = (double)numberOfEdges_Neg_Neg / numberOfEdges ;
+        double eII_pos           = (double)numberOfEdges_Pos_Pos / numberOfEdges ;
+        double eIJ_pos_neg       = (double)numberOfEdges_Pos_Neg / numberOfEdges ;
+        double eIJ_neg_pos       = (double)numberOfEdges_Neg_Pos / numberOfEdges ;
+
+        double a_pos = (eII_pos + eIJ_neg_pos);
+        double a_neg = (eII_neg + eIJ_pos_neg);
+
+        double r = ((eII_neg + eII_pos) - (a_pos * a_neg)) / (1 - (a_pos * a_neg)) ;
+
+        return r;
+    }
+
+    private double assortVaccineRefusal(double currentR) {
+        /**
+         * This method will either increase or decrease assortative mixing, depending on the target assortativity
+         * This method will maintain the underlying topology of the network, only modifying node characteristics
+         * For each change, assortativity is re-calculated and compared to the target assortativity.
+         * If the change is undesired, node characteristics are reverted.
+         * Successful or unsuccessful, the method returns the current assortativity (r) of the network.
+         */
+
+        int deltaNN = 0 ;
+        int deltaNP = 0 ;
+        int deltaPN = 0 ;
+        int deltaPP = 0 ;
+        int randomIndex ;
+
+        // generate node & edge arrays for index access
+        ArrayList<Edge> edges = new ArrayList<Edge>() ;
+        ArrayList<Node>     nodes = new ArrayList<Node>() ;
+        for (Node node : this.graph.getVertices()) {
+            nodes.add(node);
+        }
+        for (Edge edge : this.graph.getEdges()) {
+            edges.add(edge);
+        }
+
+        // initialize people involved
+        Node p1, p2, pSwap;
+
+        // pick a random edge that connects nodes of either of the two offset-types  (positive->negative or negative->positive)
+        do {
+            randomIndex = this.random.nextInt(this.graph.getEdgeCount());
+            Edge randomEdge = edges.get(randomIndex);
+            Pair pair = this.graph.getEndpoints(randomEdge);
+            p1 = (Node)pair.getFirst();
+            p2 = (Node)pair.getSecond();
+        }
+        while(p1.getStatus() == Node.ACCEPT && p2.getStatus() == Node.ACCEPT ||
+                p1.getStatus() == Node.REFUSE && p2.getStatus() == Node.REFUSE);
+
+        // first, we'll try swapping out p1's sentiment
+        pSwap = p1;
+
+        // we only swap negative sentiments, positive sentiments remain unchanged
+        if (p1.getStatus() == Node.ACCEPT) pSwap = p2;
+
+        // check out pSwap's neighbors
+        Collection neighbors = this.graph.getNeighbors(pSwap);
+        Iterator neighborsIterator = neighbors.iterator();
+
+        // since pSwap is negative by this point, if the neighbor also has a negative
+        while(neighborsIterator.hasNext()) {
+            Node neighbor = (Node) neighborsIterator.next();
+            if (neighbor.getStatus() == Node.REFUSE) {
+                deltaNN--;
+                deltaNP++;
+            }
+            else {
+                deltaPN--;
+                deltaPP++;
+            }
+        }
+        // swap first node now! otherwise calculations will be wrong if second node
+        pSwap.setStatus(Node.ACCEPT);
+
+        // now pick a random node that is positive, and that is not connected to a positive node
+        Node pRandom;
+
+        // first make sure the node is positive
+        do {
+            randomIndex = this.random.nextInt(this.graph.getVertexCount());
+            pRandom = (Node) nodes.get(randomIndex);
+        }
+        while (pRandom.getStatus() == Node.REFUSE);
+
+        // calculate numberOfEdges that change
+        neighbors = this.graph.getNeighbors(pRandom);
+        neighborsIterator = neighbors.iterator();
+        while (neighborsIterator.hasNext()) {
+            Node neighbor = (Node) neighborsIterator.next();
+            if (neighbor.getStatus() == Node.REFUSE) {
+                deltaPN--;
+                deltaNN++;
+            }
+            else {
+                deltaPP--;
+                deltaPN++;
+            }
+        }
+        pRandom.setStatus(Node.REFUSE);
+
+        double r = this.getAssortativity(this.edgesNN+deltaNN, this.edgesPP+deltaPP, this.edgesPN+deltaPN, this.edgesNP+deltaNP);
+
+        if (r < currentR) {
+            pSwap.setStatus(Node.REFUSE);
+            pRandom.setStatus(Node.ACCEPT);
+            return currentR;
+        }
+        else {
+            this.edgesNN += deltaNN;
+            this.edgesPP += deltaPP;
+            this.edgesPN += deltaPN;
+            this.edgesNP += deltaNP;
+            this.deltaR = Math.abs(r - currentR);
+
+
+            return r;
+        }
+
+    }
+
+
 }

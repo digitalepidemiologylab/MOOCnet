@@ -13,6 +13,8 @@ public class Settings {
     private double targetCV      = 2                     ;
     private int    numberOfNodes = 500                   ;
     private int    networkType   = 0                     ;
+    private double refusalCoverage = 0.20                ;
+    private double assortativityTarget = 0.99999         ;
 
     public static Settings getInstance() {
         return ourInstance;
@@ -20,6 +22,22 @@ public class Settings {
 
     private Settings() {
 
+    }
+
+    public void setAssortativityTarget(double assortativityTarget) {
+        this.assortativityTarget = assortativityTarget;
+    }
+
+    public double getAssortativityTarget() {
+        return this.assortativityTarget;
+    }
+
+    public void setRefusalCoverage(double refusalCoverage) {
+        this.refusalCoverage = refusalCoverage;
+    }
+
+    public double getRefusalCoverage() {
+        return this.refusalCoverage;
     }
 
     public void setNetworkType(int networkType) {
