@@ -9,19 +9,27 @@ package MOOCnet;
 public class Settings {
 
     private static Settings ourInstance = new Settings() ;
-    private int meanDegree       = 5                     ;
-    private double targetCV      = 2                     ;
-    private int    numberOfNodes = 500                   ;
-    private int    networkType   = 0                     ;
-    private double refusalCoverage = 0.20                ;
-    private double assortativityTarget = 0.99999         ;
+    private int    meanDegree                  = 5       ;
+    private double targetCV                    = 2       ;
+    private int    numberOfNodes               = 500     ;
+    private int    networkType                 = 0       ;
+    private double refusalCoverage             = 0.20    ;
+    private double assortativityTarget         = 0.99999 ;
+    private double smallWorldRewireProbability = 0.05    ;
 
     public static Settings getInstance() {
         return ourInstance;
     }
 
     private Settings() {
+    }
 
+    public void setSmallWorldRewireProbability(double rewireProbability) {
+        this.smallWorldRewireProbability = rewireProbability;
+    }
+
+    public double getSmallWorldRewireProbability() {
+        return this.smallWorldRewireProbability;
     }
 
     public void setAssortativityTarget(double assortativityTarget) {

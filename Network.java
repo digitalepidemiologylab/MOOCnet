@@ -22,40 +22,31 @@ public class Network {
     private Graph<Node, Edge> graph                  ;
     private Node[]            nodes                  ;
     private Edge[]            edges                  ;
-    public static final int   RANDOM_NET     = 0     ;
-    public static final int   SMALLWORLD_NET = 1     ;
     private int               restartCounter = 0     ;
     private boolean           g2g            = false ;
     private int               refusalCount   = 0     ;
-    private int               edgesNN = 0            ;
-    private int               edgesNP = 0            ;
-    private int               edgesPP = 0            ;
-    private int               edgesPN = 0            ;
-    private double            deltaR  = 0            ;
+    private int               edgesNN        = 0     ;
+    private int               edgesNP        = 0     ;
+    private int               edgesPP        = 0     ;
+    private int               edgesPN        = 0     ;
 
 
+    public void printResultsToFile() {
+        this.printEdgeList("edges" + "_netType_"   + Settings.getInstance().getNetworkType()
+                                   + "_assort_"    + String.format("%.2f", Settings.getInstance().getAssortativityTarget())
+                                   + "_CV_"        + String.format("%.2f", Settings.getInstance().getTargetCV()
+                                   + "_k_"         + String.format("%.1f", Settings.getInstance().getMeanDegree()
+                                   + "_refusal_"   + String.format("%.2f", Settings.getInstance().getRefusalCoverage()
+                                   + "_nodeCount_" + String.format(".1f", Settings.getInstance().getNumberOfNodes()))))
+                                   + "_millis_"    + System.currentTimeMillis());
 
-    public static void main(String[] args) {
-        Network net = new Network() ;
-        net.run()                   ;
-    }
-
-    public void run() {
-        Settings.getInstance().setMeanDegree(5)               ;
-        Settings.getInstance().setNumberOfNodes(500)          ;
-        Settings.getInstance().setTargetCV(0.01)              ;
-        Settings.getInstance().setNetworkType(RANDOM_NET)     ;
-        Settings.getInstance().setRefusalCoverage(0.20)       ;
-        Settings.getInstance().setAssortativityTarget(0.99999);
-
-        int networkType = Settings.getInstance().getNetworkType();
-        if (networkType == RANDOM_NET)     this.runRandom()      ;
-        if (networkType == SMALLWORLD_NET) this.runSmallWorld()  ;
-
-        this.assignVaccinationSentimentStatus();
-        this.increaseAssortativity();
-        this.printEdgeList("edges" + "\t" + Settings.getInstance().getNetworkType());
-        this.printNodeList("nodes");
+        this.printNodeList("nodes" + "_netType_"   + Settings.getInstance().getNetworkType()
+                                   + "_assort_"    + String.format("%.2f", Settings.getInstance().getAssortativityTarget())
+                                   + "_CV_"        + String.format("%.2f", Settings.getInstance().getTargetCV()
+                                   + "_k_"         + String.format("%.1f", Settings.getInstance().getMeanDegree()
+                                   + "_refusal_"   + String.format("%.2f", Settings.getInstance().getRefusalCoverage()
+                                   + "_nodeCount_" + String.format(".1f", Settings.getInstance().getNumberOfNodes()))))
+                                   + "_millis_"    + System.currentTimeMillis());
     }
 
     public void assignVaccinationSentimentStatus() {
@@ -114,9 +105,9 @@ public class Network {
     }
 
     public void initRandomGraph() {
-        Set components;
+        Set components                                                ;
         int numberOfNodes = Settings.getInstance().getNumberOfNodes() ;
-        int meanDegree    = Settings.getInstance().getMeanDegree()             ;
+        int meanDegree    = Settings.getInstance().getMeanDegree()    ;
         this.nodes        = new Node[numberOfNodes]                   ;
         do {
             this.graph = new SparseGraph<Node, Edge>();
@@ -156,10 +147,13 @@ public class Network {
     }
 
     public void initSmallWorldGraph() {
-        Set components                                                ;
-        int numberOfNodes = Settings.getInstance().getNumberOfNodes() ;
-        int meanDegree    = Settings.getInstance().getMeanDegree()             ;
-            this.nodes    = new Node[numberOfNodes]                   ;
+        double rewire        = Settings.getInstance().getSmallWorldRewireProbability() ;
+        int    numberOfNodes = Settings.getInstance().getNumberOfNodes()               ;
+        int    meanDegree    = Settings.getInstance().getMeanDegree()                  ;
+               this.nodes    = new Node[numberOfNodes]                                 ;
+        Set    components                                                              ;
+
+
         do {
             this.graph = new SparseGraph<Node, Edge>();
             for (int i = 0; i < numberOfNodes; i++) {
@@ -179,7 +173,7 @@ public class Network {
                 }
             }
             for (Edge edge:this.graph.getEdges()) {
-                if (this.random.nextDouble() < 0.05) {
+                if (this.random.nextDouble() < rewire) {
                     Node source = this.graph.getEndpoints(edge).getFirst();
                     Node newDestination;
                     do {
@@ -197,21 +191,6 @@ public class Network {
         while (components.size() > 1);
         this.remakeEdgeList();
     }
-
-    public void printAdjacencyMatrix() {
-        for (Node node : this.graph.getVertices()) {
-            System.out.print(node.getID() + ":\t");
-
-            Collection neighbors = this.graph.getNeighbors(node);
-            Iterator   neighborIterator = neighbors.iterator();
-            while (neighborIterator.hasNext()) {
-                Node neighbor = (Node)neighborIterator.next();
-                System.out.print(neighbor.getID() + "\t");
-            }
-            System.out.println();
-        }
-    }
-
 
     public double getMeanDegree() {
         int sumDegree = 0;
@@ -290,17 +269,6 @@ public class Network {
         this.remakeEdgeList();
     }
 
-    private boolean checkSelfLoops() {
-        boolean selfEdge = false;
-        for (Edge edge : this.graph.getEdges()) {
-            if (this.graph.getEndpoints(edge).getFirst() == this.graph.getEndpoints(edge).getSecond())  {
-                selfEdge=true;
-                System.out.println("selfedge!");
-            }
-        }
-        return selfEdge;
-    }
-
     private void printEdgeList(String filename) {
 
         PrintWriter out = null;
@@ -333,7 +301,7 @@ public class Network {
         out.close();
     }
 
-    private void increaseAssortativity() {
+    public void increaseAssortativity() {
         double currentR = this.measureAssortativity();
         double targetR  = Settings.getInstance().getAssortativityTarget();
         int controlCounter = 0;
@@ -492,9 +460,6 @@ public class Network {
             this.edgesPP += deltaPP;
             this.edgesPN += deltaPN;
             this.edgesNP += deltaNP;
-            this.deltaR = Math.abs(r - currentR);
-
-
             return r;
         }
 
