@@ -33,19 +33,19 @@ public class Network {
 
     public void printResultsToFile() {
         this.printEdgeList("edges" + "_netType_"   + Settings.getInstance().getNetworkType()
-                                   + "_assort_"    + String.format("%.2f", Settings.getInstance().getAssortativityTarget())
-                                   + "_CV_"        + String.format("%.2f", Settings.getInstance().getTargetCV()
-                                   + "_k_"         + String.format("%.1f", Settings.getInstance().getMeanDegree()
-                                   + "_refusal_"   + String.format("%.2f", Settings.getInstance().getRefusalCoverage()
-                                   + "_nodeCount_" + String.format(".1f", Settings.getInstance().getNumberOfNodes()))))
+                                   + "_assort_"    + String.format("%.6f", Settings.getInstance().getAssortativityTarget())
+                                   + "_CV_"        + String.format("%.2f", Settings.getInstance().getTargetCV())
+                                   + "_k_"         + Settings.getInstance().getMeanDegree()
+                                   + "_refusal_"   + String.format("%.2f", Settings.getInstance().getRefusalCoverage())
+                                   + "_nodeCount_" + Settings.getInstance().getNumberOfNodes()
                                    + "_millis_"    + System.currentTimeMillis());
 
         this.printNodeList("nodes" + "_netType_"   + Settings.getInstance().getNetworkType()
-                                   + "_assort_"    + String.format("%.2f", Settings.getInstance().getAssortativityTarget())
-                                   + "_CV_"        + String.format("%.2f", Settings.getInstance().getTargetCV()
-                                   + "_k_"         + String.format("%.1f", Settings.getInstance().getMeanDegree()
-                                   + "_refusal_"   + String.format("%.2f", Settings.getInstance().getRefusalCoverage()
-                                   + "_nodeCount_" + String.format(".1f", Settings.getInstance().getNumberOfNodes()))))
+                                   + "_assort_"    + String.format("%.6f", Settings.getInstance().getAssortativityTarget())
+                                   + "_CV_"        + String.format("%.2f", Settings.getInstance().getTargetCV())
+                                   + "_k_"         + Settings.getInstance().getMeanDegree()
+                                   + "_refusal_"   + String.format("%.2f", Settings.getInstance().getRefusalCoverage())
+                                   + "_nodeCount_" + Settings.getInstance().getNumberOfNodes()
                                    + "_millis_"    + System.currentTimeMillis());
     }
 
