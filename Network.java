@@ -345,7 +345,7 @@ public class Network {
         int randomIndex ;
 
         // generate node & edge arrays for index access
-        ArrayList<Edge> edges = new ArrayList<Edge>() ;
+        ArrayList<Edge>     edges = new ArrayList<Edge>() ;
         ArrayList<Node>     nodes = new ArrayList<Node>() ;
         for (Node node : this.graph.getVertices()) {
             nodes.add(node);
@@ -418,7 +418,8 @@ public class Network {
             }
         }
         pRandom.setStatus(Node.REFUSE);
-        double r = this.getAssortativity(this.edgesNN+deltaNN, this.edgesPP+deltaPP, this.edgesPN+deltaPN, this.edgesNP+deltaNP);
+        double r = this.measureAssortativity();
+//        double r = this.getAssortativity(this.edgesNN+deltaNN, this.edgesPP+deltaPP, this.edgesPN+deltaPN, this.edgesNP+deltaNP);
         if (r < currentR) {
             pSwap.setStatus(Node.REFUSE);
             pRandom.setStatus(Node.ACCEPT);
@@ -476,7 +477,7 @@ public class Network {
         this.finalR = this.measureAssortativity();
         if (Settings.getInstance().getNetworkType() == Manager.RANDOM_NET)     networkType = "randomNet"     ;
         if (Settings.getInstance().getNetworkType() == Manager.SMALLWORLD_NET) networkType = "smallWorldNet" ;
-        String uniqueTimeStamp = String.format("%.7f", ((double)System.currentTimeMillis())/1000);
+        String uniqueTimeStamp = String.format("%7f", ((double)System.currentTimeMillis())/1000);
         this.printEdgeList(networkType + "_edgeList"
                 + "_assort_"    + String.format("%.6f", this.finalR)
                 + "_CV_"        + String.format("%.2f", this.finalCV)
