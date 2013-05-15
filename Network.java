@@ -30,130 +30,12 @@ public class Network {
     private int               edgesPP        = 0     ;
     private int               edgesPN        = 0     ;
 
-
-    public void printResultsToFile() {
-        this.printEdgeList("edges" + "_netType_"   + Settings.getInstance().getNetworkType()
-                                   + "_assort_"    + String.format("%.6f", Settings.getInstance().getAssortativityTarget())
-                                   + "_CV_"        + String.format("%.2f", Settings.getInstance().getTargetCV())
-                                   + "_k_"         + Settings.getInstance().getMeanDegree()
-                                   + "_refusal_"   + String.format("%.2f", Settings.getInstance().getRefusalCoverage())
-                                   + "_nodeCount_" + Settings.getInstance().getNumberOfNodes()
-                                   + "_millis_"    + System.currentTimeMillis());
-
-        this.printNodeList("nodes" + "_netType_"   + Settings.getInstance().getNetworkType()
-                                   + "_assort_"    + String.format("%.6f", Settings.getInstance().getAssortativityTarget())
-                                   + "_CV_"        + String.format("%.2f", Settings.getInstance().getTargetCV())
-                                   + "_k_"         + Settings.getInstance().getMeanDegree()
-                                   + "_refusal_"   + String.format("%.2f", Settings.getInstance().getRefusalCoverage())
-                                   + "_nodeCount_" + Settings.getInstance().getNumberOfNodes()
-                                   + "_millis_"    + System.currentTimeMillis());
-    }
-
-    public void assignVaccinationSentimentStatus() {
-        int    numberOfNodes    = Settings.getInstance().getNumberOfNodes();
-        double refusalCovg      = Settings.getInstance().getRefusalCoverage();
-        int    numberOfRefusers = (int)Math.round(numberOfNodes * refusalCovg);
-
-        while (this.refusalCount < numberOfRefusers) {
-            Node randomNode;
-            do {
-                randomNode = this.nodes[this.random.nextInt(numberOfNodes)];
-            }
-            while (randomNode.getStatus() != Node.NEUTRAL);
-            if (this.random.nextDouble() < refusalCovg) {
-                randomNode.setStatus(Node.REFUSE);
-                this.refusalCount++;
-            }
-        }
-
-        for (Node node : this.graph.getVertices()) {
-            if (node.getStatus() == Node.NEUTRAL) node.setStatus(Node.ACCEPT);
-        }
-    }
-
-    public void runSmallWorld() {
-        double targetCV = Settings.getInstance().getTargetCV();
-        this.initSmallWorldGraph();
-        String fileName = "SW.EdgeList" + String.format("%.3f", this.getCV());
-        this.printEdgeList(fileName);
-        while (this.getCV() < targetCV) {
-            this.rewire();
-            System.out.println(this.getMeanDegree() + "\t" + this.getCV());
-        }
-        fileName = "SW.EdgeList" + String.format(".3f", this.getCV());
-        this.printEdgeList(fileName);
-
-    }
-
-    public void runRandom() {
-        System.out.println("THIS MAY TAKE A FEW ATTEMPTS...please hold...");
-
-        do {
-            this.initRandomGraph();
-        }
-        while (!this.g2g);
-
-        double targetCV = Settings.getInstance().getTargetCV();
-        String fileName = "Rnd.EdgeList" + String.format("%.3f", this.getCV());
-        this.printEdgeList(fileName);
-        while (this.getCV() < targetCV) {
-            this.rewire();
-            System.out.println(this.getMeanDegree() + "\t" + this.getCV());
-        }
-        fileName = "Rnd.EdgeList" + String.format(".3f", this.getCV());
-        this.printEdgeList(fileName);
-    }
-
-    public void initRandomGraph() {
-        Set components                                                ;
-        int numberOfNodes = Settings.getInstance().getNumberOfNodes() ;
-        int meanDegree    = Settings.getInstance().getMeanDegree()    ;
-        this.nodes        = new Node[numberOfNodes]                   ;
-        do {
-            this.graph = new SparseGraph<Node, Edge>();
-            for (int i = 0; i < numberOfNodes; i++) {
-                Node node          = new Node(i) ;
-                     this.nodes[i] = node        ;
-                     this.graph.addVertex(node)  ;
-            }
-
-            for (Node node : this.graph.getVertices()) {
-                while (this.graph.degree(node) < meanDegree) {
-                    this.restartCounter++;
-                    if (this.restartCounter > 5000) {
-                        this.restartCounter = 0;
-                        return;
-                    }
-                    Node node2;
-                    do {
-                        node2 = this.nodes[this.random.nextInt(this.nodes.length)];
-                    }
-                    while(node2 == node);
-
-                    if (this.graph.getNeighbors(node).contains(node2) || this.graph.degree(node2) == meanDegree) continue;
-                    else {
-                        Edge newEdge = new Edge();
-                        this.graph.addEdge(newEdge, node, node2);
-                    }
-                }
-            }
-            WeakComponentClusterer wcc = new WeakComponentClusterer();
-            components = wcc.transform(this.graph);
-        }
-        while (components.size() > 1) ;
-        this.g2g = true               ;
-        this.remakeEdgeList()         ;
-
-    }
-
     public void initSmallWorldGraph() {
         double rewire        = Settings.getInstance().getSmallWorldRewireProbability() ;
         int    numberOfNodes = Settings.getInstance().getNumberOfNodes()               ;
         int    meanDegree    = Settings.getInstance().getMeanDegree()                  ;
                this.nodes    = new Node[numberOfNodes]                                 ;
         Set    components                                                              ;
-
-
         do {
             this.graph = new SparseGraph<Node, Edge>();
             for (int i = 0; i < numberOfNodes; i++) {
@@ -192,47 +74,107 @@ public class Network {
         this.remakeEdgeList();
     }
 
-    public double getMeanDegree() {
-        int sumDegree = 0;
-        for (Node node : this.graph.getVertices()) {
-            sumDegree += this.graph.degree(node);
+    public void initRandomGraph() {
+        Set components                                                ;
+        int numberOfNodes = Settings.getInstance().getNumberOfNodes() ;
+        int meanDegree    = Settings.getInstance().getMeanDegree()    ;
+        this.nodes        = new Node[numberOfNodes]                   ;
+        do {
+            this.graph = new SparseGraph<Node, Edge>();
+            for (int i = 0; i < numberOfNodes; i++) {
+                Node node          = new Node(i) ;
+                this.nodes[i] = node        ;
+                this.graph.addVertex(node)  ;
+            }
+
+            for (Node node : this.graph.getVertices()) {
+                while (this.graph.degree(node) < meanDegree) {
+                    this.restartCounter++;
+                    if (this.restartCounter > 5000) {
+                        this.restartCounter = 0;
+                        return;
+                    }
+                    Node node2;
+                    do {
+                        node2 = this.nodes[this.random.nextInt(this.nodes.length)];
+                    }
+                    while(node2 == node);
+
+                    if (this.graph.getNeighbors(node).contains(node2) || this.graph.degree(node2) == meanDegree) continue;
+                    else {
+                        Edge newEdge = new Edge();
+                        this.graph.addEdge(newEdge, node, node2);
+                    }
+                }
+            }
+            WeakComponentClusterer wcc = new WeakComponentClusterer();
+            components = wcc.transform(this.graph);
         }
-        double meanDegree = (1.0*sumDegree) / this.graph.getVertexCount();
-        return meanDegree;
+        while (components.size() > 1) ;
+        this.g2g = true               ;
+        this.remakeEdgeList()         ;
     }
 
-    public double getStandardDeviation() {
-        double standardDeviation;
-        double meanDegree = this.getMeanDegree();
-        double sumDifSquares = 0;
-        for (Node node : this.graph.getVertices()) {
-            double dif = this.graph.degree(node) - meanDegree;
-            double difSquared = dif*dif;
-            sumDifSquares += difSquared;
+    public void runSmallWorld() {
+        Set components;
+
+        double targetCV = Settings.getInstance().getTargetCV();
+        this.initSmallWorldGraph();
+        String fileName = "SmallWorld.EdgeList.before__CV=" + String.format("%.3f", this.getCV()) + ".csv";
+        this.printEdgeList(fileName);
+        int counter = 0;
+        while (this.getCV() < targetCV) {
+            this.rewire();
+            counter++;
+            if (counter%2500 == 0){
+                WeakComponentClusterer wcc = new WeakComponentClusterer();
+                components = wcc.transform(this.graph);
+                boolean connected = true;
+                boolean staticMeanDegree = false;
+                if (components.size() == 1) connected = true;
+                if (this.getMeanDegree() == Settings.getInstance().getMeanDegree()) staticMeanDegree = true;
+                System.out.println(String.format("%.2f",(100*(this.getCV()/targetCV))/2.0) + "% Complete\t||\tCV: " + this.getCV() + "\t||\tFully Connected?: " + connected + " \t||\tDegree Uniformity?: " + staticMeanDegree);
+            }
+
         }
-        standardDeviation = Math.pow(sumDifSquares / this.graph.getVertexCount(), 0.5);
-        return standardDeviation;
+        fileName = "SmallWorld.EdgeList.after__CV=" + String.format(".3f", this.getCV()) + ".csv";
+        this.printEdgeList(fileName);
+
     }
 
-    private double getCV() {
-        double stDev = this.getStandardDeviation();
-        double meanDeg = this.getMeanDegree();
-        return stDev/meanDeg;
-    }
-
-    private void remakeEdgeList() {
-        int i = 0;
-        this.edges = new Edge[this.graph.getEdgeCount()];
-        for (Edge edge : this.graph.getEdges()) {
-            this.edges[i] = edge;
-            i++;
+    public void runRandom() {
+        System.out.println("THIS MAY TAKE A FEW ATTEMPTS...please hold...");
+        Set components;
+        do {
+            this.initRandomGraph();
         }
+        while (!this.g2g);
+
+        double targetCV = Settings.getInstance().getTargetCV();
+        String fileName = "Random.EdgeList.before__CV" + String.format("%.3f", this.getCV()) + ".csv";
+        this.printEdgeList(fileName);
+        int counter = 0;
+        while (this.getCV() < targetCV) {
+            this.rewire();
+            if (counter%2500 == 0) {
+                WeakComponentClusterer wcc = new WeakComponentClusterer();
+                components = wcc.transform(this.graph);
+                boolean connected = true;
+                boolean staticMeanDegree = false;
+                if (components.size() == 1) connected = true;
+                if (this.getMeanDegree() == Settings.getInstance().getMeanDegree()) staticMeanDegree = true;
+                System.out.println(String.format("%.2f",(100*(this.getCV()/targetCV))/2.0) + "% Complete\t||\tCV: " + this.getCV() + "\t||\tFully Connected?: " + connected + "\t||\tDegree Uniformity?: " + staticMeanDegree);
+            }
+            counter++;
+
+        }
+        fileName = "Random.EdgeList.after__CV=" + String.format(".3f", this.getCV()) + ".csv";
+        this.printEdgeList(fileName);
     }
 
     private void rewire() {
         double currentCV = this.getCV();
         Edge edge = this.edges[this.random.nextInt(this.edges.length)];
-
         Node source = this.graph.getEndpoints(edge).getFirst();
         Node destination = this.graph.getEndpoints(edge).getSecond();
         if (this.graph.getNeighborCount(destination) == 1) return;
@@ -270,7 +212,6 @@ public class Network {
     }
 
     private void printEdgeList(String filename) {
-
         PrintWriter out = null;
         try {
             out = new PrintWriter(new java.io.FileWriter(filename));
@@ -286,7 +227,6 @@ public class Network {
     }
 
     private void printNodeList(String filename) {
-
         PrintWriter out = null;
         try {
             out = new PrintWriter(new java.io.FileWriter(filename));
@@ -301,15 +241,46 @@ public class Network {
         out.close();
     }
 
+    public void assignVaccinationSentimentStatus() {
+        int    numberOfNodes    = Settings.getInstance().getNumberOfNodes();
+        double refusalCovg      = Settings.getInstance().getRefusalCoverage();
+        int    numberOfRefusers = (int)Math.round(numberOfNodes * refusalCovg);
+
+        while (this.refusalCount < numberOfRefusers) {
+            Node randomNode;
+            do {
+                randomNode = this.nodes[this.random.nextInt(numberOfNodes)];
+            }
+            while (randomNode.getStatus() != Node.NEUTRAL);
+            if (this.random.nextDouble() < refusalCovg) {
+                randomNode.setStatus(Node.REFUSE);
+                this.refusalCount++;
+            }
+        }
+
+        for (Node node : this.graph.getVertices()) {
+            if (node.getStatus() == Node.NEUTRAL) node.setStatus(Node.ACCEPT);
+        }
+    }
+
     public void increaseAssortativity() {
         double currentR = this.measureAssortativity();
         double targetR  = Settings.getInstance().getAssortativityTarget();
+        Set components;
         int controlCounter = 0;
         if (currentR < targetR) {
             while (currentR < targetR) {
                 currentR = this.assortVaccineRefusal(currentR);
                 controlCounter++;
-                System.out.println(currentR);
+                if (controlCounter%2500==0) {
+                    WeakComponentClusterer wcc = new WeakComponentClusterer();
+                    components = wcc.transform(this.graph);
+                    boolean connected = true;
+                    boolean staticMeanDegree = false;
+                    if (components.size() == 1) connected = true;
+                    if (this.getMeanDegree() == Settings.getInstance().getMeanDegree()) staticMeanDegree = true;
+                    System.out.println(String.format("%.4f", 50+(100*(currentR/targetR)/2.0)) + "% Complete\t||\tassortativity: " + currentR + "\t||\tFully Connected?: " + connected + " \t||\tDegree Uniformity?: " + staticMeanDegree);
+                }
             }
         }
     }
@@ -341,9 +312,6 @@ public class Network {
     }
 
     public double getAssortativity(int numberOfEdges_Neg_Neg, int numberOfEdges_Pos_Pos, int numberOfEdges_Pos_Neg, int numberOfEdges_Neg_Pos) {
-        /**
-         * Assortative Mixing calculations for directed networks (see Newman 2003)
-         */
         int    numberOfEdges     = numberOfEdges_Neg_Neg + numberOfEdges_Pos_Pos + numberOfEdges_Pos_Neg + numberOfEdges_Neg_Pos ;
         double eII_neg           = (double)numberOfEdges_Neg_Neg / numberOfEdges ;
         double eII_pos           = (double)numberOfEdges_Pos_Pos / numberOfEdges ;
@@ -383,10 +351,10 @@ public class Network {
             edges.add(edge);
         }
 
-        // initialize people involved
+        // initialize node involved
         Node p1, p2, pSwap;
 
-        // pick a random edge that connects nodes of either of the two offset-types  (positive->negative or negative->positive)
+        // pick a random edge that connects nodes of either of the two offset-types  (accept->refuse or refuse->accept)
         do {
             randomIndex = this.random.nextInt(this.graph.getEdgeCount());
             Edge randomEdge = edges.get(randomIndex);
@@ -400,7 +368,7 @@ public class Network {
         // first, we'll try swapping out p1's sentiment
         pSwap = p1;
 
-        // we only swap negative sentiments, positive sentiments remain unchanged
+        // we only swap refusal sentiments, acceptors remain unchanged
         if (p1.getStatus() == Node.ACCEPT) pSwap = p2;
 
         // check out pSwap's neighbors
@@ -422,10 +390,10 @@ public class Network {
         // swap first node now! otherwise calculations will be wrong if second node
         pSwap.setStatus(Node.ACCEPT);
 
-        // now pick a random node that is positive, and that is not connected to a positive node
+        // now pick a random node that is accept, and that is not connected to a accept node
         Node pRandom;
 
-        // first make sure the node is positive
+        // first make sure the node is accept
         do {
             randomIndex = this.random.nextInt(this.graph.getVertexCount());
             pRandom = (Node) nodes.get(randomIndex);
@@ -447,9 +415,7 @@ public class Network {
             }
         }
         pRandom.setStatus(Node.REFUSE);
-
         double r = this.getAssortativity(this.edgesNN+deltaNN, this.edgesPP+deltaPP, this.edgesPN+deltaPN, this.edgesNP+deltaNP);
-
         if (r < currentR) {
             pSwap.setStatus(Node.REFUSE);
             pRandom.setStatus(Node.ACCEPT);
@@ -462,8 +428,65 @@ public class Network {
             this.edgesNP += deltaNP;
             return r;
         }
-
     }
 
+    public double getMeanDegree() {
+        int sumDegree = 0;
+        for (Node node : this.graph.getVertices()) {
+            sumDegree += this.graph.degree(node);
+        }
+        double meanDegree = (1.0*sumDegree) / this.graph.getVertexCount();
+        return meanDegree;
+    }
+
+    public double getStandardDeviation() {
+        double standardDeviation;
+        double meanDegree = this.getMeanDegree();
+        double sumDifSquares = 0;
+        for (Node node : this.graph.getVertices()) {
+            double dif = this.graph.degree(node) - meanDegree;
+            double difSquared = dif*dif;
+            sumDifSquares += difSquared;
+        }
+        standardDeviation = Math.pow(sumDifSquares / this.graph.getVertexCount(), 0.5);
+        return standardDeviation;
+    }
+
+    private double getCV() {
+        double stDev = this.getStandardDeviation();
+        double meanDeg = this.getMeanDegree();
+        return stDev/meanDeg;
+    }
+
+    private void remakeEdgeList() {
+        int i = 0;
+        this.edges = new Edge[this.graph.getEdgeCount()];
+        for (Edge edge : this.graph.getEdges()) {
+            this.edges[i] = edge;
+            i++;
+        }
+    }
+
+    public void printResultsToFile() {
+        this.printEdgeList("edges" + "_netType_"   + Settings.getInstance().getNetworkType()
+                + "_assort_"    + String.format("%.6f", Settings.getInstance().getAssortativityTarget())
+                + "_CV_"        + String.format("%.2f", Settings.getInstance().getTargetCV())
+                + "_k_"         + Settings.getInstance().getMeanDegree()
+                + "_refusal_"   + String.format("%.2f", Settings.getInstance().getRefusalCoverage())
+                + "_nodeCount_" + Settings.getInstance().getNumberOfNodes()
+                + "_millis_"    + System.currentTimeMillis());
+
+        this.printNodeList("nodes" + "_netType_"   + Settings.getInstance().getNetworkType()
+                + "_assort_"    + String.format("%.6f", Settings.getInstance().getAssortativityTarget())
+                + "_CV_"        + String.format("%.2f", Settings.getInstance().getTargetCV())
+                + "_k_"         + Settings.getInstance().getMeanDegree()
+                + "_refusal_"   + String.format("%.2f", Settings.getInstance().getRefusalCoverage())
+                + "_nodeCount_" + Settings.getInstance().getNumberOfNodes()
+                + "_millis_"    + System.currentTimeMillis());
+    }
+
+    public Graph<Node,Edge> returnGraph() {
+        return this.graph;
+    }
 
 }

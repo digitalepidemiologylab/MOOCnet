@@ -1,9 +1,7 @@
 package MOOCnet;
 
 import edu.uci.ics.jung.graph.Graph;
-
 import java.io.IOException;
-
 /**
  * Created with IntelliJ IDEA.
  * User: ellscampbell
@@ -15,6 +13,7 @@ public class Manager {
     private Graph<Node,Edge> graph ;
     private Node[]           nodes ;
     private Edge[]           edges ;
+    private Network          net = new Network();
 
     public static final int   RANDOM_NET     = 0 ;
     public static final int   SMALLWORLD_NET = 1 ;
@@ -24,22 +23,23 @@ public class Manager {
         double  refusalCoverage     = 0.20                         ;
         double  targetAssortativity = 0.99999                      ;
         double  targetDegreeCV      = 2.0                          ;
-        int     networkType         = SMALLWORLD_NET               ;
+        int     networkType         = RANDOM_NET                   ;
         double  rewire              = 0                            ;
         int     numberOfNodes       = 500                          ;
-        int     meanDegree          = 5                            ;
+        int     meanDegree          = 6                            ;
         if (networkType == SMALLWORLD_NET) rewire = 0.50           ;
-        manager.initHighCVNetwork(networkType         ,
-                                  numberOfNodes       ,
-                                  meanDegree          ,
-                                  targetDegreeCV      ,
-                                  rewire              ,
-                                  targetAssortativity ,
-                                  refusalCoverage     )            ;
+        manager.setInitialConditions(networkType         ,
+                                     numberOfNodes       ,
+                                     meanDegree          ,
+                                     targetDegreeCV      ,
+                                     rewire              ,
+                                     targetAssortativity ,
+                                     refusalCoverage     );        ;
+        manager.run();
+
     }
 
-    private void initHighCVNetwork(int networkType, int numberOfNodes, int meanDegree, double targetDegreeCV, double rewire, double targetAssortativity, double refusalCoverage) {
-        Network net = new Network()                                        ;
+    private void setInitialConditions(int networkType, int numberOfNodes, int meanDegree, double targetDegreeCV, double rewire, double targetAssortativity, double refusalCoverage) {
         Settings.getInstance().setMeanDegree(meanDegree)                   ;
         Settings.getInstance().setNumberOfNodes(numberOfNodes)             ;
         Settings.getInstance().setTargetCV(targetDegreeCV)                 ;
@@ -47,20 +47,40 @@ public class Manager {
         Settings.getInstance().setRefusalCoverage(refusalCoverage)         ;
         Settings.getInstance().setAssortativityTarget(targetAssortativity) ;
         Settings.getInstance().setSmallWorldRewireProbability(rewire)      ;
+    }
 
+
+    private void run() {
+        int networkType = Settings.getInstance().getNetworkType();
+        this.generate_low_and_high_CV_networks(networkType);
+        this.initGraph();
+        this.assignVaccinationRefusal();
+        this.increaseAssortativity();
+        this.net.printResultsToFile();
+
+    }
+
+    private void initGraph() {
+        this.graph = this.net.returnGraph();
+    }
+
+    private void generate_low_and_high_CV_networks(int networkType) {
         if (networkType == RANDOM_NET)     {
-            net.initRandomGraph() ;
-            net.runRandom();
-            net.assignVaccinationSentimentStatus();
-            net.increaseAssortativity();
+            this.net.initRandomGraph() ;
+            this.net.runRandom()       ;
         }
-        if (networkType == SMALLWORLD_NET) {
-            net.initSmallWorldGraph()  ;
-            net.runSmallWorld();
-            net.assignVaccinationSentimentStatus();
-            net.increaseAssortativity();
 
+        if (networkType == SMALLWORLD_NET) {
+            this.net.initSmallWorldGraph() ;
+            this.net.runSmallWorld()       ;
         }
-        net.printResultsToFile();
+    }
+
+    private void assignVaccinationRefusal() {
+        this.net.assignVaccinationSentimentStatus() ;
+    }
+
+    private void increaseAssortativity() {
+        this.net.increaseAssortativity() ;
     }
 }
