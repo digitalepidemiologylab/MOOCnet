@@ -29,6 +29,8 @@ public class Network {
     private int               edgesNP        = 0     ;
     private int               edgesPP        = 0     ;
     private int               edgesPN        = 0     ;
+    private double            finalR         = 0     ;
+    private double            finalCV        = 0     ;
 
     public void initSmallWorldGraph() {
         double rewire        = Settings.getInstance().getSmallWorldRewireProbability() ;
@@ -117,15 +119,14 @@ public class Network {
 
     public void runSmallWorld() {
         Set components;
-
         double targetCV = Settings.getInstance().getTargetCV();
         this.initSmallWorldGraph();
-        String fileName = "SmallWorld.EdgeList.before__CV=" + String.format("%.3f", this.getCV()) + ".csv";
-        this.printEdgeList(fileName);
         int counter = 0;
-        while (this.getCV() < targetCV) {
+        double cv = this.getCV();
+        while (cv < targetCV) {
             this.rewire();
-            counter++;
+
+            //slow, but useful for testing & monitoring
             if (counter%2500 == 0){
                 WeakComponentClusterer wcc = new WeakComponentClusterer();
                 components = wcc.transform(this.graph);
@@ -133,12 +134,13 @@ public class Network {
                 boolean staticMeanDegree = false;
                 if (components.size() == 1) connected = true;
                 if (this.getMeanDegree() == Settings.getInstance().getMeanDegree()) staticMeanDegree = true;
-                System.out.println(String.format("%.2f",(100*(this.getCV()/targetCV))/2.0) + "% Complete\t||\tCV: " + this.getCV() + "\t||\tFully Connected?: " + connected + " \t||\tDegree Uniformity?: " + staticMeanDegree);
+                System.out.println(String.format("%.2f",(100*(cv/targetCV))/2.0) + "% Complete\t||\tCV: " + cv + "\t||\tFully Connected?: " + connected + " \t||\tDegree Uniformity?: " + staticMeanDegree);
             }
 
+            counter++;
+            cv = this.getCV();
         }
-        fileName = "SmallWorld.EdgeList.after__CV=" + String.format(".3f", this.getCV()) + ".csv";
-        this.printEdgeList(fileName);
+        this.finalCV = cv;
 
     }
 
@@ -151,11 +153,12 @@ public class Network {
         while (!this.g2g);
 
         double targetCV = Settings.getInstance().getTargetCV();
-        String fileName = "Random.EdgeList.before__CV" + String.format("%.3f", this.getCV()) + ".csv";
-        this.printEdgeList(fileName);
         int counter = 0;
-        while (this.getCV() < targetCV) {
+        double cv = this.getCV();
+        while (cv < targetCV) {
             this.rewire();
+
+            //slow, but useful for testing & monitoring
             if (counter%2500 == 0) {
                 WeakComponentClusterer wcc = new WeakComponentClusterer();
                 components = wcc.transform(this.graph);
@@ -163,13 +166,12 @@ public class Network {
                 boolean staticMeanDegree = false;
                 if (components.size() == 1) connected = true;
                 if (this.getMeanDegree() == Settings.getInstance().getMeanDegree()) staticMeanDegree = true;
-                System.out.println(String.format("%.2f",(100*(this.getCV()/targetCV))/2.0) + "% Complete\t||\tCV: " + this.getCV() + "\t||\tFully Connected?: " + connected + "\t||\tDegree Uniformity?: " + staticMeanDegree);
+                System.out.println(String.format("%.2f",(100*(cv/targetCV))/2.0) + "% Complete\t||\tCV: " + cv + "\t||\tFully Connected?: " + connected + "\t||\tDegree Uniformity?: " + staticMeanDegree);
             }
+            cv = this.getCV();
             counter++;
-
         }
-        fileName = "Random.EdgeList.after__CV=" + String.format(".3f", this.getCV()) + ".csv";
-        this.printEdgeList(fileName);
+        this.finalCV = cv;
     }
 
     private void rewire() {
@@ -283,6 +285,7 @@ public class Network {
                 }
             }
         }
+        this.finalR = this.measureAssortativity();
     }
     private double measureAssortativity() {
         /**
@@ -468,21 +471,27 @@ public class Network {
     }
 
     public void printResultsToFile() {
-        this.printEdgeList("edges" + "_netType_"   + Settings.getInstance().getNetworkType()
-                + "_assort_"    + String.format("%.6f", Settings.getInstance().getAssortativityTarget())
-                + "_CV_"        + String.format("%.2f", Settings.getInstance().getTargetCV())
-                + "_k_"         + Settings.getInstance().getMeanDegree()
-                + "_refusal_"   + String.format("%.2f", Settings.getInstance().getRefusalCoverage())
-                + "_nodeCount_" + Settings.getInstance().getNumberOfNodes()
-                + "_millis_"    + System.currentTimeMillis());
+        String networkType = null;
+        this.finalCV = this.getCV();
+        this.finalR = this.measureAssortativity();
+        if (Settings.getInstance().getNetworkType() == Manager.RANDOM_NET)     networkType = "randomNet"     ;
+        if (Settings.getInstance().getNetworkType() == Manager.SMALLWORLD_NET) networkType = "smallWorldNet" ;
+        String uniqueTimeStamp = String.format("%.7f", ((double)System.currentTimeMillis())/1000);
+        this.printEdgeList(networkType + "_edgeList"
+                + "_assort_"    + String.format("%.6f", this.finalR)
+                + "_CV_"        + String.format("%.2f", this.finalCV)
+                + "_k_"         + this.getMeanDegree()
+                + "_refusal_"   + String.format("%.2f", (1.0*this.refusalCount/this.graph.getVertexCount()))
+                + "_nodeCount_" + this.graph.getVertexCount()
+                + "_ts_"    + uniqueTimeStamp);
 
-        this.printNodeList("nodes" + "_netType_"   + Settings.getInstance().getNetworkType()
-                + "_assort_"    + String.format("%.6f", Settings.getInstance().getAssortativityTarget())
-                + "_CV_"        + String.format("%.2f", Settings.getInstance().getTargetCV())
-                + "_k_"         + Settings.getInstance().getMeanDegree()
-                + "_refusal_"   + String.format("%.2f", Settings.getInstance().getRefusalCoverage())
-                + "_nodeCount_" + Settings.getInstance().getNumberOfNodes()
-                + "_millis_"    + System.currentTimeMillis());
+        this.printNodeList(networkType + "_nodeList"
+                + "_assort_"    + String.format("%.6f", this.finalR)
+                + "_CV_"        + String.format("%.2f", this.finalCV)
+                + "_k_"         + this.getMeanDegree()
+                + "_refusal_"   + String.format("%.2f", (1.0*this.refusalCount/this.graph.getVertexCount()))
+                + "_nodeCount_" + this.graph.getVertexCount()
+                + "_ts_"        + uniqueTimeStamp);
     }
 
     public Graph<Node,Edge> returnGraph() {
