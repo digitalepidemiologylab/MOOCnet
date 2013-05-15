@@ -2,6 +2,8 @@ package MOOCnet;
 
 import edu.uci.ics.jung.graph.Graph;
 import java.io.IOException;
+import java.util.Random;
+
 /**
  * Created with IntelliJ IDEA.
  * User: ellscampbell
@@ -10,36 +12,45 @@ import java.io.IOException;
  */
 public class Manager {
 
-    private Graph<Node,Edge> graph ;
-    private Node[]           nodes ;
-    private Edge[]           edges ;
-    private Network          net = new Network();
+    private Graph<Node,Edge> graph                  ;
+    private Node[]           nodes                  ;
+    private Edge[]           edges                  ;
+    private Random           random = new Random()  ;
+    private Network          net    = new Network() ;
+
 
     public static final int   RANDOM_NET     = 0 ;
     public static final int   SMALLWORLD_NET = 1 ;
 
-    public static void main(String[] args) throws IOException {
-        Manager manager             = new Manager()                ;
-        double  refusalCoverage     = 0.20                         ;
-        double  targetAssortativity = 0.99999                      ;
-        double  targetDegreeCV      = 2.0                          ;
-        int     networkType         = RANDOM_NET                   ;
-        double  rewire              = 0                            ;
-        int     numberOfNodes       = 500                          ;
-        int     meanDegree          = 6                            ;
-        if (networkType == SMALLWORLD_NET) rewire = 0.50           ;
-        manager.setInitialConditions(networkType         ,
-                                     numberOfNodes       ,
-                                     meanDegree          ,
-                                     targetDegreeCV      ,
-                                     rewire              ,
-                                     targetAssortativity ,
-                                     refusalCoverage     );        ;
-        manager.run();
-
+    public static void main(String[] args) throws IOException                 {
+        Manager manager             = new Manager()                           ;
+        double  refusalCoverage     = 0.20                                    ;
+        double  targetAssortativity = 0.99999                                 ;
+        double  targetDegreeCV      = 2.0                                     ;
+        double  rewire              = 42.0                                    ;
+        int     numberOfNodes       = 500                                     ;
+        int     meanDegree          = 6                                       ;
+        int     networkType         = 42                                      ;
+        if (manager.random.nextDouble() <= 0.01) networkType = SMALLWORLD_NET ;
+        else                                     networkType = RANDOM_NET     ;
+        if (networkType == SMALLWORLD_NET) rewire = 0.50                      ;
+        manager.setInitialConditions(networkType                              ,
+                                     numberOfNodes                            ,
+                                     meanDegree                               ,
+                                     targetDegreeCV                           ,
+                                     rewire                                   ,
+                                     targetAssortativity                      ,
+                                     refusalCoverage)                         ;
+        manager.run()                                                         ;
     }
 
-    private void setInitialConditions(int networkType, int numberOfNodes, int meanDegree, double targetDegreeCV, double rewire, double targetAssortativity, double refusalCoverage) {
+    private void setInitialConditions(int    networkType         ,
+                                      int    numberOfNodes       ,
+                                      int    meanDegree          ,
+                                      double targetDegreeCV      ,
+                                      double rewire              ,
+                                      double targetAssortativity ,
+                                      double refusalCoverage     )         {
         Settings.getInstance().setMeanDegree(meanDegree)                   ;
         Settings.getInstance().setNumberOfNodes(numberOfNodes)             ;
         Settings.getInstance().setTargetCV(targetDegreeCV)                 ;
@@ -49,31 +60,29 @@ public class Manager {
         Settings.getInstance().setSmallWorldRewireProbability(rewire)      ;
     }
 
-
     private void run() {
-        int networkType = Settings.getInstance().getNetworkType();
-        this.generate_low_and_high_CV_networks(networkType);
-        this.initGraph();
-        this.assignVaccinationRefusal();
-        this.increaseAssortativity();
-        this.net.printResultsToFile();
+        int networkType = Settings.getInstance().getNetworkType() ;
+        System.out.println(networkType)                           ;
+        this.generate_low_and_high_CV_networks(networkType)       ;
+        this.initGraph()                                          ;
+        this.assignVaccinationRefusal()                           ;
+        this.increaseAssortativity()                              ;
+        this.net.printResultsToFile()                             ;
 
     }
-
-    private void initGraph() {
-        this.graph = this.net.returnGraph();
-    }
-
     private void generate_low_and_high_CV_networks(int networkType) {
-        if (networkType == RANDOM_NET)     {
+        if (networkType == RANDOM_NET) {
             this.net.initRandomGraph() ;
             this.net.runRandom()       ;
         }
-
         if (networkType == SMALLWORLD_NET) {
             this.net.initSmallWorldGraph() ;
             this.net.runSmallWorld()       ;
         }
+    }
+
+    private void initGraph() {
+        this.graph = this.net.returnGraph() ;
     }
 
     private void assignVaccinationRefusal() {
