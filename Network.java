@@ -279,7 +279,7 @@ public class Network {
                     boolean staticMeanDegree = false;
                     if (components.size() == 1) connected = true;
                     if (this.getMeanDegree() == Settings.getInstance().getMeanDegree()) staticMeanDegree = true;
-                    System.out.println(String.format("%.4f", 50+(100*(currentR/targetR)/2.0)) + "% Complete\t||\tassortativity: " + currentR + "\t||\tFully Connected?: " + connected + " \t||\tDegree Uniformity?: " + staticMeanDegree);
+                    System.out.println(String.format("%.2f", 50+(100*(currentR/targetR)/2.0)) + "% Complete\t||\tassortativity: " + currentR + "\t||\tFully Connected?: " + connected + " \t||\tDegree Uniformity?: " + staticMeanDegree);
                 }
             }
         }
