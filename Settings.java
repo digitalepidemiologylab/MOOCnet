@@ -16,12 +16,30 @@ public class Settings {
     private double refusalCoverage             = 0.20    ;
     private double assortativityTarget         = 0.99999 ;
     private double smallWorldRewireProbability = 0.05    ;
+    private int    minimumDegree               = 8       ;
+    private int    maximumDegree               = 13      ;
 
     public static Settings getInstance() {
         return ourInstance;
     }
 
     private Settings() {
+    }
+
+    public void setMinimumDegree(int minimumDegree) {
+        this.minimumDegree = minimumDegree;
+    }
+
+    public int getMinimumDegree() {
+        return this.minimumDegree;
+    }
+
+    public void setMaximumDegree(int maximumDegree) {
+        this.maximumDegree = maximumDegree;
+    }
+
+    public int getMaximumDegree() {
+        return this.maximumDegree;
     }
 
     public void setSmallWorldRewireProbability(double rewireProbability) {

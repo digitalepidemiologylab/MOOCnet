@@ -24,8 +24,8 @@ public class Manager {
 
     public static void main(String[] args) throws IOException                 {
         Manager manager             = new Manager()                           ;
-        double  refusalCoverage     = 0.20                                   ;
-        double  targetAssortativity = 0.935                                   ;
+        double  refusalCoverage     = 0.20                                    ;
+        double  targetAssortativity = 0.995                                   ;
         double  targetDegreeCV      = 0                                       ;
         double  rewire              = 42.0                                    ;
         int     numberOfNodes       = 500                                     ;
@@ -87,7 +87,8 @@ public class Manager {
         this.net.assignVaccinationSentimentStatus() ;
     }
 
-    private void increaseAssortativity() {
-        this.net.increaseAssortativity() ;
+    private double increaseAssortativity() {
+        double finalR = this.net.increaseAssortativity() ;
+        return finalR;
     }
 }

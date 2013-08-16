@@ -25,17 +25,19 @@ public class Network {
     private int               restartCounter = 0     ;
     private boolean           g2g            = false ;
     private int               refusalCount   = 0     ;
-    private int               edgesNN        = 0     ;
-    private int               edgesNP        = 0     ;
-    private int               edgesPP        = 0     ;
-    private int               edgesPN        = 0     ;
     private double            finalR         = 0     ;
     private double            finalCV        = 0     ;
+    private double            deltaR         = 0     ;
+    private int               controlCounter = 0     ;
+
+
 
     public void initSmallWorldGraph() {
         double rewire        = Settings.getInstance().getSmallWorldRewireProbability() ;
         int    numberOfNodes = Settings.getInstance().getNumberOfNodes()               ;
         int    meanDegree    = Settings.getInstance().getMeanDegree()                  ;
+        int    maxDegree     = Settings.getInstance().getMaximumDegree()               ;
+        int    minDegree     = Settings.getInstance().getMinimumDegree()               ;
                this.nodes    = new Node[numberOfNodes]                                 ;
         Set    components                                                              ;
         do {
@@ -59,11 +61,18 @@ public class Network {
             for (Edge edge:this.graph.getEdges()) {
                 if (this.random.nextDouble() < rewire) {
                     Node source = this.graph.getEndpoints(edge).getFirst();
+
+                    // if source has minimum degree, try the source of the next edge
+                    if (this.graph.degree(source) == minDegree) continue;
+
                     Node newDestination;
+
                     do {
                         newDestination = this.nodes[this.random.nextInt(numberOfNodes)];
                     }
-                    while (this.graph.isNeighbor(source,newDestination) || source.equals(newDestination));
+                    // select a new random destination if nodes are already neighbors, if it would generate a self-loop, or if its degree would exceed the maximum degree
+                    while ((this.graph.isNeighbor(source,newDestination)) || (source.equals(newDestination)) || (this.graph.degree(newDestination) == maxDegree));
+
                     this.graph.removeEdge(edge);
                     Edge newEdge = new Edge();
                     this.graph.addEdge(newEdge, source, newDestination, EdgeType.UNDIRECTED);
@@ -127,7 +136,7 @@ public class Network {
             this.rewire();
 
             //slow, but useful for testing & monitoring
-            if (counter%2500 == 0){
+            if (counter%1000 == 0){
                 WeakComponentClusterer wcc = new WeakComponentClusterer();
                 components = wcc.transform(this.graph);
                 boolean connected = true;
@@ -159,7 +168,7 @@ public class Network {
             this.rewire();
 
             //slow, but useful for testing & monitoring
-            if (counter%2500 == 0) {
+            if (counter%1000 == 0) {
                 WeakComponentClusterer wcc = new WeakComponentClusterer();
                 components = wcc.transform(this.graph);
                 boolean connected = true;
@@ -247,6 +256,7 @@ public class Network {
         int    numberOfNodes    = Settings.getInstance().getNumberOfNodes();
         double refusalCovg      = Settings.getInstance().getRefusalCoverage();
         int    numberOfRefusers = (int)Math.round(numberOfNodes * refusalCovg);
+        this.refusalCount=0;
 
         while (this.refusalCount < numberOfRefusers) {
             Node randomNode;
@@ -259,33 +269,56 @@ public class Network {
                 this.refusalCount++;
             }
         }
-
         for (Node node : this.graph.getVertices()) {
             if (node.getStatus() == Node.NEUTRAL) node.setStatus(Node.ACCEPT);
         }
     }
 
-    public void increaseAssortativity() {
-        double currentR = this.measureAssortativity();
-        double targetR  = Settings.getInstance().getAssortativityTarget();
+    public void resetSentiment() {
+        for (Node node : this.graph.getVertices()) {
+            node.setStatus(Node.NEUTRAL);
+        }
+        this.refusalCount=0;
+    }
+
+    public double increaseAssortativity() {
+        double currentR  = this.measureAssortativity();
+        double targetR   = Settings.getInstance().getAssortativityTarget();
         Set components;
-        int controlCounter = 0;
+        int printCounter = 0;
         if (currentR < targetR) {
             while (currentR < targetR) {
+
+
+                if (this.controlCounter > 50000) {
+                    System.out.println("reset");
+                    this.resetSentiment();
+                    this.assignVaccinationSentimentStatus();
+                    currentR = this.measureAssortativity();
+                    this.controlCounter=0;
+                    int refusal = 0;
+                    for (Node node : this.graph.getVertices()) {
+                        if (node.getStatus() == Node.REFUSE) refusal++;
+                    }
+                }
+
+
                 currentR = this.assortVaccineRefusal(currentR);
-                controlCounter++;
-                if (controlCounter%2500==0) {
+                printCounter++;
+                if (printCounter%1000==0) {
                     WeakComponentClusterer wcc = new WeakComponentClusterer();
                     components = wcc.transform(this.graph);
                     boolean connected = true;
                     boolean staticMeanDegree = false;
                     if (components.size() == 1) connected = true;
                     if (this.getMeanDegree() == Settings.getInstance().getMeanDegree()) staticMeanDegree = true;
-                    System.out.println(String.format("%.2f", 50+(100*(currentR/targetR)/2.0)) + "% Complete\t||\tassortativity: " + currentR + "\t||\tFully Connected?: " + connected + " \t||\tDegree Uniformity?: " + staticMeanDegree);
+                    System.out.println(String.format("%.2f", 50+(100*(currentR/targetR)/2.0)) + "% Complete\t||\tr: " + currentR + "\t||\tLastDelta: " + String.format("%.9f",this.deltaR) + "\t||\tFailedSwaps: " + this.controlCounter);
                 }
+
             }
         }
         this.finalR = this.measureAssortativity();
+        return this.finalR;
     }
     private double measureAssortativity() {
         /**
@@ -305,11 +338,6 @@ public class Network {
             if (source.getStatus() == Node.ACCEPT && destination.getStatus() == Node.REFUSE) numberOfEdges_Pos_Neg++ ;
             if (source.getStatus() == Node.REFUSE && destination.getStatus() == Node.ACCEPT) numberOfEdges_Neg_Pos++ ;
         }
-
-        this.edgesNN = numberOfEdges_Neg_Neg;
-        this.edgesPP = numberOfEdges_Pos_Pos;
-        this.edgesNP = numberOfEdges_Neg_Pos;
-        this.edgesPN = numberOfEdges_Pos_Neg;
 
         return this.getAssortativity(numberOfEdges_Neg_Neg, numberOfEdges_Pos_Pos, numberOfEdges_Pos_Neg, numberOfEdges_Neg_Pos);
     }
@@ -338,10 +366,6 @@ public class Network {
          * Successful or unsuccessful, the method returns the current assortativity (r) of the network.
          */
 
-        int deltaNN = 0 ;
-        int deltaNP = 0 ;
-        int deltaPN = 0 ;
-        int deltaPP = 0 ;
         int randomIndex ;
 
         // generate node & edge arrays for index access
@@ -374,22 +398,6 @@ public class Network {
         // we only swap refusal sentiments, acceptors remain unchanged
         if (p1.getStatus() == Node.ACCEPT) pSwap = p2;
 
-        // check out pSwap's neighbors
-        Collection neighbors = this.graph.getNeighbors(pSwap);
-        Iterator neighborsIterator = neighbors.iterator();
-
-        // since pSwap is negative by this point, if the neighbor also has a negative
-        while(neighborsIterator.hasNext()) {
-            Node neighbor = (Node) neighborsIterator.next();
-            if (neighbor.getStatus() == Node.REFUSE) {
-                deltaNN--;
-                deltaNP++;
-            }
-            else {
-                deltaPN--;
-                deltaPP++;
-            }
-        }
         // swap first node now! otherwise calculations will be wrong if second node
         pSwap.setStatus(Node.ACCEPT);
 
@@ -403,37 +411,20 @@ public class Network {
         }
         while (pRandom.getStatus() == Node.REFUSE);
 
-        // calculate numberOfEdges that change
-        neighbors = this.graph.getNeighbors(pRandom);
-        neighborsIterator = neighbors.iterator();
-        while (neighborsIterator.hasNext()) {
-            Node neighbor = (Node) neighborsIterator.next();
-            if (neighbor.getStatus() == Node.REFUSE) {
-                deltaPN--;
-                deltaNN++;
-            }
-            else {
-                deltaPP--;
-                deltaPN++;
-            }
-        }
         pRandom.setStatus(Node.REFUSE);
         double r = this.measureAssortativity();
-//        double r = this.getAssortativity(this.edgesNN+deltaNN, this.edgesPP+deltaPP, this.edgesPN+deltaPN, this.edgesNP+deltaNP);
-        if (r < currentR) {
+        this.controlCounter++;
+        if (r - currentR < 0) {
             pSwap.setStatus(Node.REFUSE);
             pRandom.setStatus(Node.ACCEPT);
             return currentR;
         }
         else {
-            this.edgesNN += deltaNN;
-            this.edgesPP += deltaPP;
-            this.edgesPN += deltaPN;
-            this.edgesNP += deltaNP;
+            this.controlCounter=0;
+            if (this.deltaR != Math.abs(r-currentR) && Math.abs(r-currentR) != 0 ) this.deltaR = Math.abs(r-currentR);
             return r;
         }
     }
-
     public double getMeanDegree() {
         int sumDegree = 0;
         for (Node node : this.graph.getVertices()) {
