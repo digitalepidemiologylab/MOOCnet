@@ -70,7 +70,7 @@ public class Network {
                     do {
                         newDestination = this.nodes[this.random.nextInt(numberOfNodes)];
                     }
-                    // select a new random destination if nodes are already neighbors, if it would generate a self-loop, or if its degree would exceed the maximum degree
+                    // select a new random destination if nodes are already neighbors OR if it would generate a self-loop OR if its degree would exceed the maximum degree
                     while ((this.graph.isNeighbor(source,newDestination)) || (source.equals(newDestination)) || (this.graph.degree(newDestination) == maxDegree));
 
                     this.graph.removeEdge(edge);
@@ -89,33 +89,38 @@ public class Network {
         Set components                                                ;
         int numberOfNodes = Settings.getInstance().getNumberOfNodes() ;
         int meanDegree    = Settings.getInstance().getMeanDegree()    ;
+        int maxDegree     = Settings.getInstance().getMaximumDegree() ;
+        int minDegree     = Settings.getInstance().getMinimumDegree() ;
         this.nodes        = new Node[numberOfNodes]                   ;
         do {
             this.graph = new SparseGraph<Node, Edge>();
             for (int i = 0; i < numberOfNodes; i++) {
-                Node node          = new Node(i) ;
-                this.nodes[i] = node        ;
-                this.graph.addVertex(node)  ;
+                Node nodeToAdd = new Node(i)      ;
+                this.nodes[i]  = nodeToAdd        ;
+                this.graph.addVertex(nodeToAdd)   ;
             }
 
-            for (Node node : this.graph.getVertices()) {
-                while (this.graph.degree(node) < meanDegree) {
+            for (Node source : this.graph.getVertices()) {
+                while (this.graph.degree(source) < meanDegree) {
                     this.restartCounter++;
                     if (this.restartCounter > 5000) {
                         this.restartCounter = 0;
                         return;
                     }
-                    Node node2;
-                    do {
-                        node2 = this.nodes[this.random.nextInt(this.nodes.length)];
-                    }
-                    while(node2 == node);
 
-                    if (this.graph.getNeighbors(node).contains(node2) || this.graph.degree(node2) == meanDegree) continue;
-                    else {
-                        Edge newEdge = new Edge();
-                        this.graph.addEdge(newEdge, node, node2);
+                    // IF source has minimum degree, try the source of the next edge
+                    if (this.graph.degree(source) == minDegree) continue;
+
+                    Node newDestination;
+                    do {
+                        newDestination = this.nodes[this.random.nextInt(this.nodes.length)];
                     }
+                    // select a new random destination if it would generate a self-loop OR if its degree would exceed the maximum degree OR if nodes are already neighbors
+                    while((newDestination == source) || (this.graph.degree(newDestination) == maxDegree) || (this.graph.isNeighbor(source,newDestination)));
+
+                    Edge newEdge = new Edge();
+                    this.graph.addEdge(newEdge, source, newDestination);
+
                 }
             }
             WeakComponentClusterer wcc = new WeakComponentClusterer();
@@ -132,6 +137,13 @@ public class Network {
         this.initSmallWorldGraph();
         int counter = 0;
         double cv = this.getCV();
+
+        // ignore minimum and maximum degree boundaries if generating high degree variability network (large cv)
+        if (this.getCV() > 0) {
+            Settings.getInstance().setMaximumDegree(Integer.MAX_VALUE);
+            Settings.getInstance().setMinimumDegree(1);
+        }
+
         while (cv < targetCV) {
             this.rewire();
 
@@ -164,6 +176,13 @@ public class Network {
         double targetCV = Settings.getInstance().getTargetCV();
         int counter = 0;
         double cv = this.getCV();
+
+        // ignore minimum and maximum degree boundaries if generating high degree variability network (large cv)
+        if (this.getCV() > 0) {
+            Settings.getInstance().setMaximumDegree(Integer.MAX_VALUE);
+            Settings.getInstance().setMinimumDegree(1);
+        }
+
         while (cv < targetCV) {
             this.rewire();
 
@@ -185,17 +204,27 @@ public class Network {
 
     private void rewire() {
         double currentCV = this.getCV();
+        int minDegree = Settings.getInstance().getMinimumDegree();
+        int maxDegree = Settings.getInstance().getMaximumDegree();
+
         Edge edge = this.edges[this.random.nextInt(this.edges.length)];
         Node source = this.graph.getEndpoints(edge).getFirst();
         Node destination = this.graph.getEndpoints(edge).getSecond();
-        if (this.graph.getNeighborCount(destination) == 1) return;
 
-        // pick a new destination that is not already connected to the source
+        // if either source or destination is already at min degree limit, return
+        if ((this.graph.degree(source) == minDegree) || (this.graph.degree(destination) == minDegree)) return;
+
+        // pick a new random destination IF:
+        // 1.) the chosen destination IS the source...OR...
+        // 2.) is already connected to the source...OR...
+        // 3.) is already at the maximum allowable degree
         Node newDestination;
         do{
             newDestination = this.nodes[this.random.nextInt(this.nodes.length)];
         }
-        while (this.graph.getNeighbors(source).contains(newDestination));
+        while ((this.graph.isNeighbor(source,newDestination)) || (newDestination == source) || (this.graph.degree(newDestination) == maxDegree)) ;
+
+        // self loof check should be redundant, but better safe than sorry
 
         //check for creating a double edge
         if (this.graph.getNeighbors(source).contains(newDestination)) return;

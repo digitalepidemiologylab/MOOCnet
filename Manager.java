@@ -24,12 +24,14 @@ public class Manager {
 
     public static void main(String[] args) throws IOException                 {
         Manager manager             = new Manager()                           ;
-        double  refusalCoverage     = 0.20                                    ;
-        double  targetAssortativity = 0.995                                   ;
+        double  refusalCoverage     = 0                                       ;
+        double  targetAssortativity = 1                                       ;
         double  targetDegreeCV      = 0                                       ;
-        double  rewire              = 42.0                                    ;
+        double  rewire              = 1.0                                     ;
         int     numberOfNodes       = 500                                     ;
-        int     meanDegree          = 6                                       ;
+        int     meanDegree          = 10                                      ;
+        int     maxDegree           = 13                                      ;
+        int     minDegree           = 8                                       ;
         int     networkType         = SMALLWORLD_NET                          ;
         if (networkType == SMALLWORLD_NET) rewire = 0.10                      ;
         manager.setInitialConditions(networkType                              ,

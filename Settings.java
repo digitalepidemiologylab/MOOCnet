@@ -9,8 +9,12 @@ package MOOCnet;
 public class Settings {
 
     private static Settings ourInstance = new Settings() ;
-    private int    meanDegree                  = 5       ;
-    private double targetCV                    = 2       ;
+    private int    meanDegree                  = 10      ;
+
+    // coefficient of degree variation (cv) of 1.73206 ^ 2 ~ 3.0000.
+    // R0 = (transmission / recovery) * mean degree * (1 + (coefficient of degree variation ^ 2))
+    // resulting in a ~4x increase over a degree with mean degree of 10 an no variation.
+    private double targetCV                    = 1.73206 ;
     private int    numberOfNodes               = 500     ;
     private int    networkType                 = 0       ;
     private double refusalCoverage             = 0.20    ;
