@@ -89,8 +89,6 @@ public class Network {
         Set components                                                ;
         int numberOfNodes = Settings.getInstance().getNumberOfNodes() ;
         int meanDegree    = Settings.getInstance().getMeanDegree()    ;
-        int maxDegree     = Settings.getInstance().getMaximumDegree() ;
-        int minDegree     = Settings.getInstance().getMinimumDegree() ;
         this.nodes        = new Node[numberOfNodes]                   ;
         do {
             this.graph = new SparseGraph<Node, Edge>();
@@ -107,16 +105,12 @@ public class Network {
                         this.restartCounter = 0;
                         return;
                     }
-
-                    // IF source has minimum degree, try the source of the next edge
-                    if (this.graph.degree(source) == minDegree) continue;
-
                     Node newDestination;
                     do {
                         newDestination = this.nodes[this.random.nextInt(this.nodes.length)];
                     }
-                    // select a new random destination if it would generate a self-loop OR if its degree would exceed the maximum degree OR if nodes are already neighbors
-                    while((newDestination == source) || (this.graph.degree(newDestination) == maxDegree) || (this.graph.isNeighbor(source,newDestination)));
+                    // select a new random destination if it would generate a self-loop OR if nodes are already neighbors
+                    while((newDestination == source) || (this.graph.isNeighbor(source,newDestination)));
 
                     Edge newEdge = new Edge();
                     this.graph.addEdge(newEdge, source, newDestination);
@@ -126,7 +120,7 @@ public class Network {
             WeakComponentClusterer wcc = new WeakComponentClusterer();
             components = wcc.transform(this.graph);
         }
-        while (components.size() > 1) ;
+        while ((components.size() > 1) || (this.getMeanDegree() < 10)) ;
         this.g2g = true               ;
         this.remakeEdgeList()         ;
     }
@@ -154,8 +148,9 @@ public class Network {
                 boolean connected = true;
                 boolean staticMeanDegree = false;
                 if (components.size() == 1) connected = true;
-                if (this.getMeanDegree() == Settings.getInstance().getMeanDegree()) staticMeanDegree = true;
-                System.out.println(String.format("%.2f",(100*(cv/targetCV))/2.0) + "% Complete\t||\tCV: " + cv + "\t||\tFully Connected?: " + connected + " \t||\tDegree Uniformity?: " + staticMeanDegree);
+                double meanDegree = this.getMeanDegree();
+                if (meanDegree == Settings.getInstance().getMeanDegree()) staticMeanDegree = true;
+                System.out.println(String.format("%.2f",(100*(cv/targetCV))/2.0) + "% Complete\t||\tCV: " + cv + "\t||\tFully Connected?: " + connected + " \t||\tMean Degree Uniformity?: " + staticMeanDegree + "\t||\tCalculated Arithmetic Mean Degree: " + meanDegree);
             }
 
             counter++;
@@ -194,7 +189,7 @@ public class Network {
                 boolean staticMeanDegree = false;
                 if (components.size() == 1) connected = true;
                 if (this.getMeanDegree() == Settings.getInstance().getMeanDegree()) staticMeanDegree = true;
-                System.out.println(String.format("%.2f",(100*(cv/targetCV))/2.0) + "% Complete\t||\tCV: " + cv + "\t||\tFully Connected?: " + connected + "\t||\tDegree Uniformity?: " + staticMeanDegree);
+                System.out.println(String.format("%.2f",(100*(cv/targetCV))/2.0) + "% Complete\t||\tCV: " + cv + "\t||\tFully Connected?: " + connected + "\t||\tDegree Uniformity?: " + staticMeanDegree + "\t" + this.getMeanDegree());
             }
             cv = this.getCV();
             counter++;
@@ -208,6 +203,9 @@ public class Network {
         int maxDegree = Settings.getInstance().getMaximumDegree();
 
         Edge edge = this.edges[this.random.nextInt(this.edges.length)];
+
+        if (this.graph.getEndpoints(edge) == null) return;
+
         Node source = this.graph.getEndpoints(edge).getFirst();
         Node destination = this.graph.getEndpoints(edge).getSecond();
 
@@ -252,6 +250,8 @@ public class Network {
     }
 
     private void printEdgeList(String filename) {
+        System.out.println("printing edgeList to file: " + filename);
+
         PrintWriter out = null;
         try {
             out = new PrintWriter(new java.io.FileWriter(filename));
@@ -266,6 +266,8 @@ public class Network {
     }
 
     private void printNodeList(String filename) {
+        System.out.println("printing nodeList to file: " + filename);
+
         PrintWriter out = null;
         try {
             out = new PrintWriter(new java.io.FileWriter(filename));
@@ -492,6 +494,7 @@ public class Network {
         if (Settings.getInstance().getNetworkType() == Manager.RANDOM_NET)     networkType = "randomNet"     ;
         if (Settings.getInstance().getNetworkType() == Manager.SMALLWORLD_NET) networkType = "smallWorldNet" ;
         String uniqueTimeStamp = String.format("%7f", ((double)System.currentTimeMillis())/1000);
+
         this.printEdgeList(networkType + "_edgeList"
                 + "_assort_"    + String.format("%.6f", this.finalR)
                 + "_CV_"        + String.format("%.2f", this.finalCV)
