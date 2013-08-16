@@ -261,7 +261,6 @@ public class Network {
         out.println("source\ttarget");
         for (Edge edge : this.graph.getEdges()) {
             out.println(this.graph.getEndpoints(edge).getFirst().getID() + "\t" + this.graph.getEndpoints(edge).getSecond().getID());
-
         }
         out.close();
     }
@@ -317,8 +316,6 @@ public class Network {
         int printCounter = 0;
         if (currentR < targetR) {
             while (currentR < targetR) {
-
-
                 if (this.controlCounter > 50000) {
                     System.out.println("reset");
                     this.resetSentiment();
@@ -330,8 +327,6 @@ public class Network {
                         if (node.getStatus() == Node.REFUSE) refusal++;
                     }
                 }
-
-
                 currentR = this.assortVaccineRefusal(currentR);
                 printCounter++;
                 if (printCounter%1000==0) {
@@ -343,7 +338,6 @@ public class Network {
                     if (this.getMeanDegree() == Settings.getInstance().getMeanDegree()) staticMeanDegree = true;
                     System.out.println(String.format("%.2f", 50+(100*(currentR/targetR)/2.0)) + "% Complete\t||\tr: " + currentR + "\t||\tLastDelta: " + String.format("%.9f",this.deltaR) + "\t||\tFailedSwaps: " + this.controlCounter);
                 }
-
             }
         }
         this.finalR = this.measureAssortativity();

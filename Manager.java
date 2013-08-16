@@ -40,7 +40,9 @@ public class Manager {
                                      targetDegreeCV                           ,
                                      rewire                                   ,
                                      targetAssortativity                      ,
-                                     refusalCoverage)                         ;
+                                     refusalCoverage                          ,
+                                     minDegree                                ,
+                                     maxDegree)                               ;
         manager.run()                                                         ;
     }
 
@@ -50,7 +52,9 @@ public class Manager {
                                       double targetDegreeCV      ,
                                       double rewire              ,
                                       double targetAssortativity ,
-                                      double refusalCoverage     )         {
+                                      double refusalCoverage     ,
+                                      int    minDegree           ,
+                                      int    maxDegree           )         {
         Settings.getInstance().setMeanDegree(meanDegree)                   ;
         Settings.getInstance().setNumberOfNodes(numberOfNodes)             ;
         Settings.getInstance().setTargetCV(targetDegreeCV)                 ;
@@ -58,6 +62,8 @@ public class Manager {
         Settings.getInstance().setRefusalCoverage(refusalCoverage)         ;
         Settings.getInstance().setAssortativityTarget(targetAssortativity) ;
         Settings.getInstance().setSmallWorldRewireProbability(rewire)      ;
+        Settings.getInstance().setMinimumDegree(minDegree);                ;
+        Settings.getInstance().setMaximumDegree(maxDegree);                ;
     }
 
     private void run() {
